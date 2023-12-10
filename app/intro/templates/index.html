@@ -30,5 +30,5 @@
   <script>
     const banner_color = {{ data["banner_colors"] | tojson | safe }};
   </script>
-  <script src="{{ url_for('static', filename='js/index.js')}}"></script>
+  <script src="{{ url_for('.static', filename='js/index.js')}}"></script>
 {% endblock %}
