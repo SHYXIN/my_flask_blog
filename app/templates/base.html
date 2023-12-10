@@ -27,11 +27,11 @@
     <link
       rel="stylesheet"
       type="text/css"
-      href="{{ url_for('static', filename='css/myblog.css') }}"/>
+      href="{{ url_for('static', filename='css/base.css') }}"/>
     {% endblock styles %}
 
 </head>
-<body class="d-flex flex-cloumn h-100">
+<body class="d-flex flex-column h-100">
   <div class="banner card">
     <div class="card-body">
       <div class="col-md-4 offset-md-1">
@@ -54,5 +54,4 @@
     ></script>
   {% endblock %}
 </body>
-{% block scripts %}{% endblock %}
 </html>
