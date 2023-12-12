@@ -7,7 +7,9 @@ flask_debug = true
 extensions = ["flask_debugtoolbar:DebugToolbarExtension"]
 debug_tb_enabled = true
 debug_tb_intercept_redirects = false
+logging_level = "DEBUG"
 
 # configure the production environment settings
 [production]
 flask_debug = false
+logging_level = "INFO"
