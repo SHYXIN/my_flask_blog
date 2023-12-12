@@ -18,6 +18,13 @@
             )}});
         }
     </style>
+
+    <link
+      rel="shortcut icon"
+      type="image/vnd.microsoft.icon"
+      href="{{ url_for('static', filename='images/favicon.ico') }}"
+    />
+
     <link
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
@@ -48,6 +55,12 @@
   <main class="flex-shrink-0">
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
       <a class="navbar-brand ml-2" href="{{ url_for('intro_bp.home')}}">
+        <img
+          src="{{url_for('static', filename='images/myblog_brand_icon.svg')}}"
+          alt=""
+          width="30"
+          height="24"
+        />
         &nbsp;MyBlog
       </a>
       <button
