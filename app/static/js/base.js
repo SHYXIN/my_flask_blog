@@ -5,7 +5,7 @@
 (function() {
     const option = {
         animation: true,
-        delay: 30000
+        delay: 3000
     }
     var toastElements = [].slice.call(document.querySelectorAll('.toast'))
     toastElements.map((toastElement) => {

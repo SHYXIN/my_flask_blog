@@ -40,7 +40,7 @@ def create_app():
         flask_bcrypt.init_app(app)
         db.init_app(app)
 
-        _configure_logging(app, dynaconf)
+        # _configure_logging(app, dynaconf)
 
         # import the routes
         from . import intro

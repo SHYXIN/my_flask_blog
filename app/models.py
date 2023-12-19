@@ -3,10 +3,16 @@ from flask_bcrypt import (
     generate_password_hash,
     check_password_hash
 )
+from time import time
+import jwt
+
 from . import db
 from flask_login import UserMixin
+from flask import current_app
 from uuid import uuid4
 from datetime import datetime, timezone
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+
 
 
 @contextmanager
@@ -52,6 +58,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String, nullable=False, unique=True, index=True)
     hashed_password = db.Column("password", db.String, nullable=False)
     active = db.Column(db.Boolean, nullable=False, default=True)
+    confirmed = db.Column(db.Boolean, default=False)
     created = db.Column(db.DateTime, nullable=False, default=datetime.now(tz=timezone.utc))
     updated = db.Column(
         db.DateTime,
@@ -73,6 +80,47 @@ class User(UserMixin, db.Model):
 
     def verify_password(self, password):
         return check_password_hash(self.hashed_password, password)
+
+    def confirmation_token(self):
+        serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+        return serializer.dumps({"confirm": self.user_uid})
+
+    def confirm_token(self, token):
+        serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+        with db_session_manager() as db_session:
+            confirmation_link_timeout = current_app.config.get("CONFIRMATION_LINK_TIMEOUT")
+            timeout = confirmation_link_timeout * 60 * 1000
+            try:
+                data = serializer.loads(token, max_age=timeout)
+                if data.get("comfirm") != self.user_uid:
+                    return False
+                self.confirmed = True
+                db_session.add(self)
+                return True
+            except (SignatureExpired, BadSignature):
+                return False
+
+    def get_reset_token(self, timeout):
+        timeout *= 60
+        return jwt.encode(
+            {
+                "reset_password": self.user_uid,
+                "exp": time() + timeout,
+            },
+            current_app.config["SECRET_KEY"],
+            algorithm="HS256"
+        )
+
+    @staticmethod
+    def verify_reset_token(token):
+        user_uid = jwt.decode(
+            token,
+            current_app.config["SECRET_KEY"],
+            algorithms=["HS256"]
+        )["reset_password"]
+        return user_uid
+
+
 
     def __repr__(self):
         return f"""
