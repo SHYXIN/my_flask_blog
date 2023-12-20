@@ -1,11 +1,12 @@
 from logging import getLogger
 from flask import render_template, redirect, url_for, request, flash, current_app, abort
 from . import auth_bp
-from ..models import db_session_manager, User
+from ..models import db_session_manager, User, Role
 from ..emailer import send_mail
 from .. import login_manager
 from .forms import (LoginForm, RegisterNewUserForm, RequestResetPasswordForm,
-                    RequestResetPasswordForm, ResetPasswordForm, UserProfileForm)
+                    RequestResetPasswordForm, ResetPasswordForm, UserProfileForm,
+                    ResendConfirmationForm)
 from flask_login import login_user, logout_user, current_user
 from flask_login.utils import login_required
 from werkzeug.urls import url_parse
@@ -44,6 +45,9 @@ def login():
             if user is None or not user.verify_password(form.password.data):
                 flash("Invalid email or password", "warning")
                 return redirect(url_for("auth_bp.login"))
+            # if not user.confirmed:
+            #     flash("Please click on the verification link sent to your email before attempting to log in. ", "warning")
+            #     return redirect(url_for("auth_bp.login"))
             login_user(user, remember=form.remember_me.data)
             next = request.args.get("next")
             if not next or url_parse(next).netloc != "":
@@ -70,6 +74,9 @@ def register_new_user():
                 email=form.email.data,
                 password=form.password.data,
             )
+            role_name = "admin" if user.email in current_app.config.get("ADMIN_USERS") else "user"
+            role = db_session.query(Role).filter(Role.name == role_name).one_or_none()
+            role.users.append(user)
             db_session.add(user)
             db_session.commit()
             send_confirmation_email(user)
@@ -112,8 +119,31 @@ def confirm(confirmation_token):
     except Exception as e:
         logger.exception(e)
         flash(e.message)
-        return redirect(url_for("auth_bp.resend_comfirmation"))
+        return redirect(url_for("auth_bp.resend_confirmation"))
     return redirect(url_for("intro_bp.home"))
+
+@auth_bp.get("/resend_confirmation")
+@auth_bp.post("/resend_confirmation")
+def resend_confirmation():
+    form = ResendConfirmationForm()
+    if form.validate_on_submit():
+        with db_session_manager() as db_session:
+            user = (
+                db_session
+                .query(User)
+                .filter(User.email == form.email.data)
+                .one_or_none()
+            )
+            if user is not None:
+                send_confirmation_email(user)
+                timeout = current_app.config.get("CONFIRMATION_LINK_TIMEOUT")
+                flash((
+                    "Please click on the confirmation link just sent "
+                    f"to your email address within {timeout} hours "
+                    "to complete your registration"
+                ))
+                return redirect(url_for("intro_bp.home"))
+    return render_template("resend_confirmation.html", form=form)
 
 
 @auth_bp.get('/profile/<user_uid>')
@@ -228,7 +258,8 @@ def send_confirmation_email(user):
         Thank you!
         """
     )
-    send_mail(to=to, subject=subject, contents=contents)
+    print(contents)
+    # send_mail(to=to, subject=subject, contents=contents)
 
 
 def send_password_reset(user):
