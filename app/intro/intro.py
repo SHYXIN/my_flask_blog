@@ -43,6 +43,6 @@ def about():
 
 @intro_bp.route("/admin_required")
 @login_required
-@authorization_required(Role.Permissions.ADMINISTATOR)
+@authorization_required(Role.Permissions.ADMINISTRATOR)
 def admin_required():
     return render_template("admin_required.html")

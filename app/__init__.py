@@ -1,18 +1,24 @@
 import os
 import yaml
 from pathlib import Path
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, session
 from dynaconf import FlaskDynaconf
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_bcrypt import Bcrypt
 import logging
 import logging.config
+import pytz
+from datetime import timezone, datetime
+from flask_pagedown import PageDown
+from flaskext.markdown import Markdown
 
 login_manager = LoginManager()
 login_manager.login_view = "auth_bp.login"
 flask_bcrypt = Bcrypt()
 db = SQLAlchemy()
+pagedown = PageDown()
+markdown = None
 
 
 def create_app():
@@ -39,16 +45,20 @@ def create_app():
         login_manager.init_app(app)
         flask_bcrypt.init_app(app)
         db.init_app(app)
+        pagedown.init_app(app)
+        Markdown(app)
 
         # _configure_logging(app, dynaconf)
 
         # import the routes
         from . import intro
         from . import auth
+        from . import content
 
         # register the blueprints
         app.register_blueprint(intro.intro_bp)
         app.register_blueprint(auth.auth_bp)
+        app.register_blueprint(content.content_bp)
 
         # create the database if necessary
         db.create_all()
@@ -61,6 +71,14 @@ def create_app():
         @app.context_processor
         def inject_permissions():
             return dict(Permissions=Role.Permissions)
+
+        @app.template_filter()
+        def format_datetime(value, format="%Y-%m-%d %H:%M:%S"):
+            # value = datetime.fromisoformat(value)
+            value_with_timezone = value.replace(tzinfo=timezone.utc)
+            tz = pytz.timezone(session.get("timezone_info", {}).get("timeZone", "US/Eastern"))
+            local_now = value_with_timezone.astimezone(tz)
+            return local_now.strftime(format)
 
         return app
 

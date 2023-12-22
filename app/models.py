@@ -59,6 +59,7 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=False, unique=True, index=True)
     hashed_password = db.Column("password", db.String, nullable=False)
+    posts = db.relationship("Post", backref=db.backref("user", lazy="joined"))
     active = db.Column(db.Boolean, nullable=False, default=True)
     confirmed = db.Column(db.Boolean, default=False)
     created = db.Column(db.DateTime, nullable=False, default=datetime.now(tz=timezone.utc))
@@ -122,6 +123,10 @@ class User(UserMixin, db.Model):
         )["reset_password"]
         return user_uid
 
+    def can_view_posts(self):
+        can_view = (self.role.permissions | Role.Permissions.REGISTERED).value
+        return 0 <= can_view <= 1
+
 
 
     def __repr__(self):
@@ -153,7 +158,7 @@ class Role(db.Model):
         """
         REGISTERED = auto()
         EDITOR = auto()
-        ADMINISTATOR = auto()
+        ADMINISTRATOR = auto()
 
     __tablename__= "role"
     role_uid = db.Column(db.String, primary_key=True, default=get_uuid)
@@ -198,7 +203,7 @@ class Role(db.Model):
                 "raw_permissions": (
                     Role.Permissions.REGISTERED |
                     Role.Permissions.EDITOR |
-                    Role.Permissions.ADMINISTATOR
+                    Role.Permissions.ADMINISTRATOR
                 ).value
             }
         ]
@@ -227,4 +232,26 @@ class Role(db.Model):
         name: {self.name}, description: {self.description}
         permissions: {self.permissions}
         active: {'True' if self.active else 'False'}
+        """
+
+class Post(db.Model):
+    """The post class holds the main blog posts for the
+    MyBlog application"""
+    __tablename__ = "post"
+    post_uid = db.Column(db.String, primary_key=True, default=get_uuid)
+    user_uid = db.Column(db.String, db.ForeignKey("user.user_uid"), nullable=False, index=True)
+    title = db.Column(db.String)
+    content = db.Column(db.String)
+    active = db.Column(db.Boolean, nullable=False, default=True)
+    created = db.Column(db.DateTime, nullable=False, default=datetime.now(tz=timezone.utc))
+    updated = db.Column(db.DateTime, nullable=False, default=datetime.now(
+        tz=timezone.utc), onupdate=datetime.now(tz=timezone.utc))
+
+    def __repr__(self):
+        return f"""
+        post_uid: {self.post_uid}
+        title: {self.title}
+        active: {'True' if self.active else 'False'}
+        created: {self.created}
+        updated: {self.updated}
         """
