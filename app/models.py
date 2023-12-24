@@ -5,6 +5,7 @@ from flask_bcrypt import (
     check_password_hash
 )
 from time import time
+from sqlalchemy import func
 import jwt
 
 from . import db
@@ -234,14 +235,32 @@ class Role(db.Model):
         active: {'True' if self.active else 'False'}
         """
 
+def get_next_sort_key():
+    """Generates an incrementing sort_key value from the database
+
+    Raises:
+        RuntimeError: if the query fails, raises an exception
+
+    Returns:
+        integer: The new max value sort_key to use
+    """
+    with db_session_manager(session_close=False) as db_session:
+        retval = db_session.query(func.ifnull(func.max(Post.sort_key) + 1, 0)).scalar()
+        if retval is None:
+            raise RuntimeError("Failed to get new valud for sort_key")
+        return retval
+
 class Post(db.Model):
     """The post class holds the main blog posts for the
     MyBlog application"""
     __tablename__ = "post"
     post_uid = db.Column(db.String, primary_key=True, default=get_uuid)
+    parent_uid = db.Column(db.String, db.ForeignKey("post.post_uid"), default=None)
+    sort_key = db.Column(db.Integer, nullable=False, unique=True, default=get_next_sort_key)
     user_uid = db.Column(db.String, db.ForeignKey("user.user_uid"), nullable=False, index=True)
     title = db.Column(db.String)
     content = db.Column(db.String)
+    children = db.relationship("Post", backref=db.backref("parent", remote_side=[post_uid], lazy="joined"))
     active = db.Column(db.Boolean, nullable=False, default=True)
     created = db.Column(db.DateTime, nullable=False, default=datetime.now(tz=timezone.utc))
     updated = db.Column(db.DateTime, nullable=False, default=datetime.now(
@@ -250,7 +269,10 @@ class Post(db.Model):
     def __repr__(self):
         return f"""
         post_uid: {self.post_uid}
+        parent_uid: {self.parent_uid}
+        sort_key: {self.sort_key}
         title: {self.title}
+        content: {self.content}
         active: {'True' if self.active else 'False'}
         created: {self.created}
         updated: {self.updated}

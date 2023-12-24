@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
+from wtforms import StringField, TextAreaField, SubmitField
 from flask_pagedown.fields import PageDownField
 from wtforms.fields.simple import HiddenField
 from wtforms.validators import DataRequired, Length
@@ -56,4 +56,16 @@ class PostUpdateForm(FlaskForm):
     cancel = SubmitField(
         label="Cancel",
         render_kw={"tabindex": 6}
+    )
+
+
+class PostCommentForm(FlaskForm):
+    parent_post_uid = HiddenField("parent_post_uid")
+    comment = TextAreaField(
+        "Comment",
+        validators=[DataRequired()],
+        render_kw={"placeholder": " "}
+    )
+    create_comment = SubmitField(
+        "Create",
     )
