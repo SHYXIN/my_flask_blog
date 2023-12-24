@@ -1,12 +1,23 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, HiddenField
 from wtforms.fields import EmailField
 from wtforms.validators import DataRequired, Length, Email, EqualTo
 from wtforms import ValidationError
 from ..models import User, db_session_manager
-
+import json
 
 class LoginForm(FlaskForm):
+    timezone_info = HiddenField(
+        "timezone_info",
+        validators=[DataRequired()]
+    )
+
+    def validate_timezone_info(form, field):
+        try:
+            json.loads(field.data)
+        except Exception:
+            raise ValidationError("Timezone Information not in JSON parseable format")
+
     email = EmailField(
         "Email",
         validators=[DataRequired(), Length(

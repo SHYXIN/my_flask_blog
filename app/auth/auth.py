@@ -1,5 +1,5 @@
 from logging import getLogger
-from flask import render_template, redirect, url_for, request, flash, current_app, abort
+from flask import render_template, redirect, url_for, request, flash, current_app, abort, session
 from . import auth_bp
 from ..models import db_session_manager, User, Role
 from ..emailer import send_mail
@@ -10,7 +10,7 @@ from .forms import (LoginForm, RegisterNewUserForm, RequestResetPasswordForm,
 from flask_login import login_user, logout_user, current_user
 from flask_login.utils import login_required
 from werkzeug.urls import url_parse
-
+import json
 
 logger = getLogger(__name__)
 
@@ -49,6 +49,7 @@ def login():
             #     flash("Please click on the verification link sent to your email before attempting to log in. ", "warning")
             #     return redirect(url_for("auth_bp.login"))
             login_user(user, remember=form.remember_me.data)
+            session["timezone_info"] = json.loads(form.timezone_info.data)
             next = request.args.get("next")
             if not next or url_parse(next).netloc != "":
                 next = url_for("intro_bp.home")
@@ -99,6 +100,7 @@ def logout():
         redirect: Redirects to the home page
     """
     logout_user()
+    session.pop('timezone_info')
     flash("You've been logged out", "light")
     return redirect(url_for("intro_bp.home"))
 
