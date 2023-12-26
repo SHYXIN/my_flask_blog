@@ -48,31 +48,68 @@
     This macro builds the nav items for the application navbar
 #}
 {% macro build_nav_item(nav_item) %}
-  {# configure the navigation items to build in the navbar #}
-  {% set nav_items = [
-      {"name": "Home", "link": "intro_bp.home", "icon": "bi-house"},
-      {"name": "About", "link": "intro_bp.about", "icon": "bi-info-square"},
+    {# configure the navigation items to build in the navbar #}
+    {% set nav_items = [
+        {"name": "Home", "link": "intro_bp.home", "icon": "bi-house"},
+        {"name": "Content", "link": "content_bp.blog_posts", "icon": "bi-pencil-square", "dropdown": [
+            {"name": "Posts", "link": "content_bp.blog_posts"},
+            {"name": "Create", "link": "content_bp.blog_posts", "icon": "bi-pencil-square", "query_string": "action=create"},
+        ]},
+        {"name": "About","link": "intro_bp.about", "icon": "bi-info-square"},
     ]
-  %}
-  {% for nav_item in nav_items %}
-    {% if request.endpoint == nav_item["link"] %}
-      <a class="nav-link ml-2 active" aria-current="page" href="{{url_for(nav_item['link'])}}">
-        {% if "icon" in nav_item %}
-        <i class="bi {{ nav_item['icon']}}"></i>
+    %}
+    {# iterate through the nav items variable above #}
+    {% for nav_item in nav_items %}
+        {% if "dropdown" in nav_item %}
+            <li class="nav-item dropdown">
+                {% set active_link = "active"  if request.endpoint == nav_item["link"] else "" %}
+                <a class="nav-link dropdown-toggle ml-2 {{ active_link }}" id="navbarDropdown" role="button" aria-current="page" data-bs-toggle="dropdown" aria-expanded="false" href="#">
+                    {% if "icon" in nav_item %}
+                    <i class="bi {{ nav_item['icon'] }}"></i>
+                    {% endif %}
+                    {{nav_item["name"]}}
+                </a>
+                <ul class="dropdown-menu" aria-labelledy="navbarDropdown">
+                {% for dropdown_nav_item in nav_item["dropdown"] %}
+                    <li>
+                        {% if "query_string" in dropdown_nav_item %}
+                            {% if not current_user.is_anonymous %}
+                                {% set action = dropdown_nav_item.get("query_string", "=").split("=")[1] %}
+                                <a class="dropdown-item" href="{{url_for(dropdown_nav_item['link'], action=action)}}">
+                                    {% if "icon" in dropdown_nav_item %}
+                                    <i class="bi {{ nav_item['icon'] }}"></i>
+                                    {% endif %}
+                                    {{dropdown_nav_item["name"]}}
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            <a class="dropdown-item" href="{{url_for(dropdown_nav_item['link'])}}">
+                                {% if "icon" in dropdown_nav_item %}
+                                <i class="bi {{ nav_item['icon'] }}"></i>
+                                {% endif %}
+                                {{dropdown_nav_item["name"]}}
+                            </a>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+                </ul>
+            </li>
+        {% else %}
+            <li class="nav-item">
+            <a
+                class="nav-link ml-2 {{ 'active' if request.endpoint == nav_item['link'] else '' }}"
+                aria-current="page"
+                href="{{url_for(nav_item['link'])}}"
+            >
+                {% if "icon" in nav_item %}
+                <i class="bi {{ nav_item['icon'] }}"></i>
+                {% endif %}
+                {{nav_item["name"]}}
+            </a>
+            </li>
         {% endif %}
-        {{nav_item["name"]}}
-      </a>
-    {% else %}
-      <a class="nav-link ml-2" href="{{url_for(nav_item['link'])}}">
-        {% if "icon" in nav_item %}
-        <i class="bi {{ nav_item['icon']}}"></i>
-        {% endif %}
-        {{nav_item["name"]}}
-      </a>
-    {% endif %}
-  {% endfor %}
+    {% endfor %}
 {% endmacro %}
-
 {#
   This macro builds the login/logout items for the application navbar
 #}

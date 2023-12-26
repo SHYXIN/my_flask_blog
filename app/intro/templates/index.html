@@ -1,34 +1,43 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="container-fluid">
-    <div class="card bg-warning mb-3 font-weight-bold" style="margin-top: 10px">
-      <div class="card-body">
-        Current time: {{ data["now"] }}
-      </div>
+<div class="container">
+    <div class="row justify-content-md-center">
+        <div class="col-md-auto">
+            <div class="card text-dark bg-light border-secondary mt-5">
+                <div class="card-header text-center">
+                    <h1>Welcome To MyBlog</h1>
+                </div>
+                <div class="card-body">
+                    <p class="card-text fs-3">
+                        The MyBlog web application is developed as the example
+                        application presented in "The Well-Ground Python Developer"
+                        book.
+                    </p>
+                    <p class="card-text fs-3">
+                        The MyBlog application evolves over the course of chapters in the book
+                        as new features and functionality are added
+                    </p>
+                    <p class="card-text fs-3">
+                        Most of the features added over time are intended to
+                        present information, tools and techniques to help
+                        developers increase their ability to handle larger
+                        projects and think in big picture ways
+                    </p>
+                    <p class="card-text fs-3">
+                        The ultimate goal of the book is to help you translate
+                        the picture into a solid, maintainable application
+                        implementation.
+                    </p>
+                    <p class="card-text fs-3">
+                        From this page you can navigate to the
+                        <a href="{{ url_for('content_bp.blog_posts')}}">MyBlog content</a>
+                        which is the primary functionality the application provides.
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
-    <p>Page visits: {{ data["page_visit"].counts() }}</p>
-    <div class="card" style="width: 18rem">
-      <div class="card-header">
-        List of availabel banner colors
-      </div>
-      <ul class="list-group list-group-flush">
-        {% for banner_color in data["banner_colors"] %}
-        <li class="list-group-item">{{ banner_color }}</li>
-        {% endfor %}
-      </ul>
-    </div>
-    <br />
-    <button id="change-banner-color" type="button" class="btn btn-primary">
-      Change Banner color
-    </button>
-  </div>
-{% endblock %}
+</div>
 
-{% block scripts %}
-  {{ super() }}
-  <script>
-    const banner_color = {{ data["banner_colors"] | tojson | safe }};
-  </script>
-  <script src="{{ url_for('.static', filename='js/index.js')}}"></script>
 {% endblock %}
