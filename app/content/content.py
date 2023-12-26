@@ -15,7 +15,9 @@ from ..models import (
     Post,
     db,
     Role,
+    User,
 )
+from ..emailer import send_mail
 from flask_login import current_user
 from flask_login import login_required
 from .forms import (
@@ -62,6 +64,7 @@ def blog_posts_display():
         posts = (
             db_session
             .query(Post)
+            .filter(Post.parent_uid == None)
             .order_by(Post.updated.desc())
         )
         # can the current user view only active posts:
@@ -184,6 +187,7 @@ def blog_post_update(post_uid=None):
             )
         return render_template("post_update.html", form=form, post=post)
 
+
 @content_bp.post("/blog_post_create_comment")
 def blog_post_create_comment():
     form = PostCommentForm()
@@ -195,15 +199,18 @@ def blog_post_create_comment():
                 content=form.comment.data.strip(),
             )
             db_session.add(post)
-            db_session.commit()
+            db_session.flush()
             root_post = post.parent
             while root_post.parent is not None:
                 root_post = root_post.parent
+            follow_root_post(db_session, root_post)
+            notify_root_post_followers(db_session, root_post)
+            db_session.commit()
             flash("Comment created")
             return redirect(url_for("content_bp.blog_post", post_uid=root_post.post_uid))
     else:
         flash("No comment to create")
-    return redirect(url_for("intro_bp.home"))
+    return redirect(request.referrer)
 
 
 @content_bp.context_processor
@@ -256,6 +263,7 @@ def utility_processor():
         can_set_blog_post_active_state=can_set_blog_post_active_state,
     )
 
+
 def _build_posts_hierarchy(db_session, post_uid):
     # build the list of filters here to use in the CTE
     filters = [
@@ -293,3 +301,47 @@ def _build_posts_hierarchy(db_session, post_uid):
         .order_by(hierarchy.c.sorting_key)
         .all()
     )
+
+
+def follow_root_post(db_session, root_post):
+    """Add the root post to the posts_followed collection
+    if user isn't already following the root_post
+
+    Args:
+        db_session : The database session to use
+        root_post : The root post to follow
+    """
+    user = (
+        db_session.query(User)
+        .filter(User.user_uid == current_user.user_uid)
+        .one_or_none()
+    )
+    if user is not None and root_post not in user.posts_followed:
+        user.posts_followed.append(root_post)
+
+
+def notify_root_post_followers(db_session, root_post):
+    """Notify users who are following the root post
+    about an update via email
+
+    Args:
+        db_session : The database session to use
+        root_post : The root post that had an update
+    """
+    post_url = url_for(
+        "content_bp.blog_post",
+        post_uid=root_post.post_uid,
+        _external=True
+    )
+    for user_following in root_post.users_following:
+        to = user_following.email
+        subject = "A post you're following has been updated"
+        contents = (
+            f"""Hi {user_following.first_name},
+            A blog post you're following has had a comment added to it. You can view
+            that post here: {post_url}
+            Thank you!
+            """
+        )
+        print(to, subject, contents)
+        # send_mail(to=to, subject=subject, contents=contents)

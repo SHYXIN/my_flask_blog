@@ -45,6 +45,15 @@ def get_uuid():
     """
     return uuid4().hex
 
+# the association table used the create the many-to-many relationship between
+# the user and post tables
+user_post = db.Table(
+    "user_post",
+    db.Column("user_uid", db.String, db.ForeignKey("user.user_uid")),
+    db.Column("post_uid", db.String, db.ForeignKey("post.post_uid"))
+)
+
+
 
 class User(UserMixin, db.Model):
     """The User class to structure what
@@ -61,6 +70,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String, nullable=False, unique=True, index=True)
     hashed_password = db.Column("password", db.String, nullable=False)
     posts = db.relationship("Post", backref=db.backref("user", lazy="joined"))
+    posts_followed = db.relationship("Post", secondary=user_post, backref=db.backref("users_following", lazy="dynamic"))
     active = db.Column(db.Boolean, nullable=False, default=True)
     confirmed = db.Column(db.Boolean, default=False)
     created = db.Column(db.DateTime, nullable=False, default=datetime.now(tz=timezone.utc))
@@ -81,6 +91,10 @@ class User(UserMixin, db.Model):
     @password.setter
     def password(self, password):
         self.hashed_password = generate_password_hash(password)
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
 
     def verify_password(self, password):
         return check_password_hash(self.hashed_password, password)
@@ -135,11 +149,14 @@ class User(UserMixin, db.Model):
         user_uid: {self.user_uid}
         name: {self.first_name} {self.last_name}
         email: {self.email}
+        comfirmd: {self.confirmed}
         active: {'True' if self.active else 'False'}
             role_uid: {self.role.role_uid}
             name: {self.role.name}
             description: {self.role.description}
             permissions: {self.role.permissions}
+        created: {self.created}
+        updated: {self.updated}
         """
 
 
@@ -233,6 +250,8 @@ class Role(db.Model):
         name: {self.name}, description: {self.description}
         permissions: {self.permissions}
         active: {'True' if self.active else 'False'}
+        created: {self.created}
+        updated: {self.updated}
         """
 
 def get_next_sort_key():
